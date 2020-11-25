@@ -13,74 +13,101 @@ let year = '2000';
 const params = ['child-mortality', 'fertility-rate', 'gdp', 'life-expectancy', 'population'];
 const colors = ['aqua', 'lime', 'gold', 'hotpink']
 
-// Шкалы для осей и окружностей
 const x = d3.scaleLinear().range([margin*2, width-margin]);
-const y = d3.scaleLinear().range([height-margin, margin]);
-
 const xLable = svg.append('text').attr('transform', `translate(${width/2}, ${height})`);
+const xAxis = svg.append('g').attr('transform', `translate(0, ${height-margin})`);
+
+const y = d3.scaleLinear().range([height-margin, margin]);
 const yLable = svg.append('text').attr('transform', `translate(${margin/2}, ${height/2}) rotate(-90)`);
+const yAxis = svg.append('g').attr('transform', `translate(${2 * margin}, 0)`);
 
-// Part 1: задайте атрибуты 'transform' для осей
-const xAxis = svg.append('g') // .attr('transform', ... 
-const yAxis = svg.append('g')// .attr('transform', ...
+const color = d3.scaleOrdinal(colors);
+const r = d3.scaleSqrt().range([1, 10]);
 
+d3.select('#radius')
+                    .selectAll('option')
+                    .data(params)
+                    .enter()
+                    .append('option')
+                    .text(function (r) {return r})
+                    .attr("selected", function(elem) {
+                                                    if (elem == xParam) 
+                                                    return true;});
 
-// Part 2: Шкалы для цвета и радиуса объектов
-// const color = d3.scaleOrdinal()...
-// const r = d3.scaleSqrt()...
+d3.select('#x')
+            .selectAll('option')
+            .data(params)
+            .enter()
+            .append('option')
+            .text(function (x) {return x})
+            .attr("selected", function(elem) {
+                                            if (elem == xParam) 
+                                            return true;});
 
-// Part 2: для элемента select задайте options (http://htmlbook.ru/html/select) и установить selected для начального значения
-// d3.select('#radius').selectAll('option')
-//         ...
-
-
-// Part 3: select с options для осей
-// ...
-
+d3.select('#y')
+            .selectAll('option')
+            .data(params)
+            .enter()
+            .append('option')
+            .text(function (y) {return y})
+            .attr("selected", function(elem) {
+                                            if (elem == yParam)
+                                            return true;});
 
 loadData().then(data => {
+    let val = 
+        d3.nest()
+          .key(function (elem) {return elem['region'];})
+          .entries(data);
 
+    color.domain(val);
     console.log(data)
 
-    // Part 2: получитe все уникальные значения из поля 'region' при помощи d3.nest и установите их как 'domain' цветовой шкалы
-    //let regions = d3.nest()...
-    //color.domain(regions);
-
     d3.select('.slider').on('change', newYear);
-
     d3.select('#radius').on('change', newRadius);
-
-    // Part 3: подпишитесь на изменения селекторов параметров осей
-    // ...
+    d3.select('#x').on('change', newX);
+    d3.select('#y').on('change', newY);
 
     function newYear(){
         year = this.value;
         updateChart()
     }
-
     function newRadius(){
-        // Part 2: задайте логику обработки по аналогии с newYear
+        radius = this.value;
+        updateChart()
     }
+    function newX(){
+        xParam = this.value;
+        updateChart()
+    }
+    function newY(){
+        yParam = this.value;
+        updateChart()
+    }
+
     function updateChart(){
-        xLable.text(xParam);
-        yLable.text(yParam);
         d3.select('.year').text(year);
 
-        // поскольку значения показателей изначально представленны в строчном формате преобразуем их в Number при помощи +
+        xLable.text(xParam);
         let xRange = data.map(d=> +d[xParam][year]);
         x.domain([d3.min(xRange), d3.max(xRange)]);
-
         xAxis.call(d3.axisBottom(x));    
 
-        // Part 1: реализуйте отображение оси 'y'
-        // ...
-        
-        // Part 2: реализуйте обновление шкалы радиуса
-        // ...
+        yLable.text(yParam);
+        let yRange = data.map(d=> +d[yParam][year]);
+        y.domain([d3.min(yRange), d3.max(yRange)]);
+        yAxis.call(d3.axisBottom(y));
 
-        // Part 1, 2: реализуйте создание и обновление состояния точек
-        // svg.selectAll('circle').data(data)
-        //     ...
+        let rRange = data.map(d=> +d[radius][year]);
+        r.domain([d3.min(rRange), d3.max(rRange)]);
+
+        svg.selectAll('circle')
+           .data(data)
+           .join('circle')
+           .attr('r', function(elem) {return r(+elem[radius][year]); })
+           .attr('cx', function(elem) {return x(+elem[xParam][year]); })
+           .attr('cy', function(elem) {return y(+elem[yParam][year]); })
+           .attr('fill', function(elem) {return color(elem['region']); });     
     }
     
     updateChart();
